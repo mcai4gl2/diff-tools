@@ -1,0 +1,10 @@
+general:
+  artifacts:
+    - "htmlcov"
+    - "dist"
+
+test:
+  override:
+    - pip install pytest
+    - python setup.py test
+    - python setup.py bdist_egg
