@@ -23,7 +23,7 @@ class PyTest(TestCommand):
         import pytest
 
         args = [self.pytest_args] if isinstance(self.pytest_args, basestring) else list(self.pytest_args)
-        args.extend(['--cov', 'data.viewer',
+        args.extend(['--cov', 'diff.tools',
                      '--cov-report', 'html',
                      '-x', 'tests'
                      ])
