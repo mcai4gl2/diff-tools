@@ -4,7 +4,8 @@ import pandas as pd
 
 
 class DifferenceType(Enum):
-    file_not_found = 1,
+    file_not_found = 1
+    column_not_found = 2
 
 
 class DiffTask(object):
@@ -27,6 +28,19 @@ class DiffTask(object):
         except Exception as ex:
             self.differences.append(MissingDifference(DifferenceType.file_not_found, ex, False))
             return self.differences
+        self.differences.extend(col_diff(base_df, reg_df))
+        return self.differences
+
+
+def col_diff(base_df, reg_df):
+    results = list()
+    for col in base_df.columns:
+        if col not in reg_df:
+            results.append(MissingDifference(DifferenceType.column_not_found, col, False))
+    for col in reg_df.columns:
+        if col not in base_df:
+            results.append(MissingDifference(DifferenceType.column_not_found, col, True))
+    return results
 
 
 class MissingDifference(object):
