@@ -6,6 +6,7 @@ import pandas as pd
 class DifferenceType(Enum):
     file_not_found = 1
     column_not_found = 2
+    duplicated_keys = 3
 
 
 class DiffTask(object):
@@ -29,6 +30,14 @@ class DiffTask(object):
             self.differences.append(MissingDifference(DifferenceType.file_not_found, ex, False))
             return self.differences
         self.differences.extend(col_diff(base_df, reg_df))
+
+        results = duplicate_keys(base_df, self.keys)
+        for result in results:
+            self.differences.append(DuplicationDifference(result.type, result.keys, True, result.line_number))
+        results = duplicate_keys(reg_df, self.keys)
+        for result in results:
+            self.differences.append(DuplicationDifference(result.type, result.keys, False, result.line_number))
+
         return self.differences
 
 
@@ -41,6 +50,26 @@ def col_diff(base_df, reg_df):
         if col not in base_df:
             results.append(MissingDifference(DifferenceType.column_not_found, col, True))
     return results
+
+
+def duplicate_keys(df, keys):
+    results = list()
+    duplicated = df.duplicated(subset=keys, keep='first')
+    duplicated = duplicated[duplicated]
+    for index in duplicated.index:
+        results.append(DuplicationDifference(DifferenceType.duplicated_keys,
+                                             df[keys].ix[index].tolist(),
+                                             None,
+                                             index + 1))
+    return results
+
+
+class DuplicationDifference(object):
+    def __init__(self, type, keys, is_base, line_number):
+        self.type = type
+        self.keys = keys
+        self.is_base = is_base
+        self.line_number = line_number
 
 
 class MissingDifference(object):
