@@ -1,5 +1,6 @@
 from enum import Enum
 
+import numpy as np
 import pandas as pd
 
 
@@ -10,12 +11,13 @@ class DifferenceType(Enum):
 
 
 class DiffTask(object):
-    def __init__(self, base_file_name, reg_file_name, key_list, column_list):
+    def __init__(self, base_file_name, reg_file_name, key_list, column_list, ignored_columns=list()):
         self.base_file = base_file_name
         self.reg_file = reg_file_name
         self.keys = key_list
         self.columns = column_list
         self.differences = list()
+        self.ignored_columns = ignored_columns
 
     def compute(self):
         self.differences = list()
@@ -29,16 +31,33 @@ class DiffTask(object):
         except Exception as ex:
             self.differences.append(MissingDifference(DifferenceType.file_not_found, ex, False))
             return self.differences
+
+        if len(self.ignored_columns) != 0:
+            drop_columns(base_df, ignored_columns=self.ignored_columns)
+            drop_columns(reg_df, ignored_columns=self.ignored_columns)
+
         self.differences.extend(col_diff(base_df, reg_df))
 
         results = duplicate_keys(base_df, self.keys)
         for result in results:
             self.differences.append(DuplicationDifference(result.type, result.keys, True, result.line_number))
+        if len(results) != 0:
+            base_df.drop_duplicates(subset=self.keys, keep='first', inplace=True)
         results = duplicate_keys(reg_df, self.keys)
         for result in results:
             self.differences.append(DuplicationDifference(result.type, result.keys, False, result.line_number))
+        if len(results) != 0:
+            reg_df.drop_duplicates(subset=self.keys, keep='first', inplace=True)
+
+        self.differences.extend(data_diff(base_df, reg_df, self.keys))
 
         return self.differences
+
+
+def drop_columns(df, ignored_columns):
+    for col in df.columns:
+        if col in ignored_columns:
+            df.drop([col], axis=1, inplace=True)
 
 
 def col_diff(base_df, reg_df):
@@ -64,6 +83,30 @@ def duplicate_keys(df, keys):
     return results
 
 
+def data_diff(base_df, reg_df, keys):
+    results = list()
+    columns_of_interest = set(base_df.columns.tolist()).intersection(reg_df.columns.tolist())
+    for key in keys:
+        columns_of_interest.remove(key)
+    base_df = base_df.set_index(keys=keys)
+    reg_df = reg_df.set_index(keys=keys)
+    base_df = base_df.rename(columns={key:'base_' + key for key in base_df.columns}, inplace=False)
+    reg_df = reg_df.rename(columns={key:'reg_' + key for key in reg_df.columns}, inplace=False)
+    joint_df = pd.concat([base_df, reg_df], axis=1, join='inner')
+    for column in columns_of_interest:
+        base_col = 'base_' + column
+        reg_col = 'reg_' + column
+        joint_df['diff_' + column] = np.where(joint_df[base_col] == joint_df[reg_col], True, False)
+        differences = joint_df[~joint_df['diff_' + column]]
+        if not differences.empty:
+            differences = differences.apply(lambda r: DataDifference(keys=r.name,
+                                                                     column=column,
+                                                                     base_value=r[base_col],
+                                                                     reg_value=r[reg_col]), axis=1).tolist()
+            results.extend(differences)
+    return results
+
+
 class DuplicationDifference(object):
     def __init__(self, type, keys, is_base, line_number):
         self.type = type
@@ -80,10 +123,11 @@ class MissingDifference(object):
 
 
 class DataDifference(object):
-    def __init__(self, keys, at, column, type, base_value, reg_value):
-        self.keys = keys
-        self.at = at
+    def __init__(self, keys, column, base_value, reg_value):
+        if type(keys) == tuple:
+            self.keys = list(keys)
+        else:
+            self.keys = [keys]
         self.column = column
-        self.type = type
         self.base_value = base_value
         self.reg_value = reg_value

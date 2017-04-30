@@ -1,6 +1,6 @@
 from StringIO import StringIO
 
-from mock import patch, sentinel, MagicMock
+from mock import patch, sentinel
 import pandas as pd
 
 import diff.tools.models as models
@@ -30,15 +30,19 @@ def test_can_handle_non_exist_reg_file(base_file_name):
 
 def test_compute(base_file_name):
     with patch('diff.tools.models.col_diff') as col_diff, \
-         patch('diff.tools.models.duplicate_keys') as duplicate_keys:
+         patch('diff.tools.models.duplicate_keys') as duplicate_keys, \
+         patch('diff.tools.models.data_diff') as data_diff:
         col_diff.return_value = [sentinel.col_diff]
-        duplicate_keys.return_value = [MagicMock()]
+        duplicate_keys.return_value = []
+        data_diff.return_value = [sentinel.data_diff]
         task = models.DiffTask(base_file_name, base_file_name, [], [])
         results = task.compute()
         col_diff.assert_called_once()
         duplicate_keys.assert_called()
+        data_diff.assert_called_once()
         assert duplicate_keys.call_count == 2
         assert sentinel.col_diff in results
+        assert sentinel.data_diff in results
 
 
 def test_col_diff_handles_matching_base_reg_columns(some_df):
@@ -108,3 +112,76 @@ def test_find_duplicate_keys_handles_multi_keys_difference():
     assert result.type == models.DifferenceType.duplicated_keys
     assert result.keys == [1, 2]
     assert result.is_base is None
+
+
+def test_data_diff_when_no_diff():
+    input_base_data = StringIO("""col1,col2,col3
+c1,2,3
+c2,5,6
+c3,8,9
+""")
+    base_df = pd.read_csv(input_base_data, sep=",")
+    results = models.data_diff(base_df, base_df, ['col2'])
+    assert len(results) == 0
+
+
+def test_single_key_data_difference():
+    input_base_data = StringIO("""col1,col2,col3
+c1,2,3
+c2,5,6
+c3,8,9
+""")
+    base_df = pd.read_csv(input_base_data, sep=",")
+    input_reg_data = StringIO("""col1,col2,col3
+c1,2,3
+c1,5,6
+c1,8,9
+""")
+    reg_df = pd.read_csv(input_reg_data, sep=",")
+    results = models.data_diff(base_df, reg_df, ['col2'])
+    assert len(results) == 2
+
+    result = results[0]
+    assert type(result) == models.DataDifference
+    assert result.keys == [5]
+    assert result.column == 'col1'
+    assert result.base_value == 'c2'
+    assert result.reg_value == 'c1'
+
+    result = results[1]
+    assert type(result) == models.DataDifference
+    assert result.keys == [8]
+    assert result.column == 'col1'
+    assert result.base_value == 'c3'
+    assert result.reg_value == 'c1'
+
+
+def test_multi_keys_data_difference():
+    input_base_data = StringIO("""col1,col2,col3
+c1,2,3
+c2,5,6
+c3,8,9
+""")
+    base_df = pd.read_csv(input_base_data, sep=",")
+    input_reg_data = StringIO("""col1,col2,col3
+c1,2,3
+c2,5,6
+c3,8,10
+""")
+    reg_df = pd.read_csv(input_reg_data, sep=",")
+    results = models.data_diff(base_df, reg_df, ['col1', 'col2'])
+    assert len(results) == 1
+
+    result = results[0]
+    assert type(result) == models.DataDifference
+    assert result.keys == ['c3', 8]
+    assert result.column == 'col3'
+    assert result.base_value == 9
+    assert result.reg_value == 10
+
+
+def test_drop_columns(some_df):
+    columns = some_df.columns
+    list = [columns[0]]
+    models.drop_columns(some_df, list)
+    assert len(some_df.columns) == (len(columns) - 1)
