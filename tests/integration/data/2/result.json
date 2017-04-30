@@ -1,0 +1,22 @@
+{
+  "differences": [
+    {
+      "keys": [
+        580146
+      ],
+      "column": "construction",
+      "type": "data_mismatch",
+      "reg_value": "Concrete",
+      "base_value": "Wood"
+    },
+    {
+      "keys": [
+        767862
+      ],
+      "column": "construction",
+      "type": "data_mismatch",
+      "reg_value": "Concrete",
+      "base_value": "Wood"
+    }
+  ]
+}

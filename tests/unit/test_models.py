@@ -31,17 +31,21 @@ def test_can_handle_non_exist_reg_file(base_file_name):
 def test_compute(base_file_name):
     with patch('diff.tools.models.col_diff') as col_diff, \
          patch('diff.tools.models.duplicate_keys') as duplicate_keys, \
+         patch('diff.tools.models.missing_keys') as missing_keys, \
          patch('diff.tools.models.data_diff') as data_diff:
         col_diff.return_value = [sentinel.col_diff]
         duplicate_keys.return_value = []
+        missing_keys.return_value = [sentinel.missing_keys]
         data_diff.return_value = [sentinel.data_diff]
         task = models.DiffTask(base_file_name, base_file_name, [], [])
         results = task.compute()
         col_diff.assert_called_once()
         duplicate_keys.assert_called()
+        missing_keys.assert_called_once()
         data_diff.assert_called_once()
         assert duplicate_keys.call_count == 2
         assert sentinel.col_diff in results
+        assert sentinel.missing_keys in results
         assert sentinel.data_diff in results
 
 
