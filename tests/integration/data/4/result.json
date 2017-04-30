@@ -1,0 +1,9 @@
+{
+  "differences": [
+    {
+      "data": "point_granularity",
+      "type": "DifferenceType.column_not_found",
+      "file": "reg"
+    }
+  ]
+}

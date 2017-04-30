@@ -1,0 +1,12 @@
+{
+  "differences": [
+    {
+      "keys": [
+        767862
+      ],
+      "line_number": 20,
+      "type": "DifferenceType.duplicated_keys",
+      "file": "reg"
+    }
+  ]
+}

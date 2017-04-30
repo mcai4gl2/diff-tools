@@ -1,0 +1,9 @@
+{
+  "differences": [
+    {
+      "data": [223488, "FL", "CLAY COUNTY"],
+      "type": "DifferenceType.missing_keys",
+      "file": "reg"
+    }
+  ]
+}

@@ -24,6 +24,11 @@ def test(test_case, keys):
     assert expected['differences'] == result['differences']
 
 
+def test_0():
+    # No difference
+    test("0", ["policyID"])
+
+
 def test_1():
     # Missing row in reg
     test("1", ["policyID"])
@@ -32,3 +37,18 @@ def test_1():
 def test_2():
     # Column data differences in reg
     test("2", ["policyID"])
+
+
+def test_3():
+    # Missing row in reg
+    test("3", ["policyID", "statecode", "county"])
+
+
+def test_4():
+    # Missing column in reg
+    test("4", ["policyID"])
+
+
+def test_5():
+    # Duplicated key
+    test("5", ["policyID"])
