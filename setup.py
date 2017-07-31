@@ -36,6 +36,6 @@ setup(
       packages=find_packages(),
       cmdclass={'test': PyTest},
       setup_requires=[],
-      install_requires=['numpy', 'flask', 'pandas', 'pyyaml', 'enum34'],
+      install_requires=['numpy', 'flask', 'pandas', 'pyyaml', 'enum34', 'tabulate', 'jinja2'],
       tests_require=['pytest', 'mock', 'pytest-cov', 'mock']
       )

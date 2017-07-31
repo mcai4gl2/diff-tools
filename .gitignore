@@ -1,6 +1,9 @@
 *.egg-info
 *.pyc
-.diff
 .DS_Store
 .idea
 .cache
+.coverage
+venv
+.eggs
+htmlcov
